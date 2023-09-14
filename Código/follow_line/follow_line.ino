@@ -3,7 +3,7 @@
 //variaveis do sensor de cor
 int verm = 2, verde = 4, azul = 7;
 int RGB[3][3]; //[n° do sensor][R, G e B]
-int corDir = A0, corEsq = A1, corGarra = A2;
+int IResq = A0, IRdir = A1, corDir = A6, corEsq = A7;
 const int fita_verde[2][3] = {//[0 = mínimo | 1 = máximo][R, G e B](ajustar valores com teste e se deve mudar o padrão de 1 byte)
   {0, 900, 0}, 
   {300, 1023, 300}
@@ -15,6 +15,8 @@ double sp, in, out;
 float kp = 0.5, ki = 0, kd = 0; //valores ainda a serem realmente definidos
 PID PID(&in, &out, &sp, kp, ki, kd, DIRECT);
 
+//variaveis do motor
+int vb = 205, motorEsq1 = 5, motorEsq2 = 6, motorDir1 = 9, motorDir2 = 10;  //valor base do motor
 void lerlinha(){
   int t; //tempo para ldr "acostumar" com brilho
   digitalWrite(verm, LOW); //força desligamento de todos os leds
@@ -65,20 +67,25 @@ void setup() {
   pinMode(corDir, INPUT);
   pinMode(corEsq, INPUT);
   pinMode(corGarra, INPUT);
-  pinMode(12, INPUT);
-  pinMode(13, INPUT);
+  pinMode(A0, INPUT);
+  pinMode(A1, INPUT);
 
   pinMode(verm, OUTPUT);
   pinMode(verde, OUTPUT);
   pinMode(azul, OUTPUT);
-  
+  pinMode(motorEsq1, OUTPUT);
+  pinMode(motorEsq2, OUTPUT);
+  pinMode(motorDir1, OUTPUT);
+  pinMode(motorDir2, OUTPUT);
+
   sp = 511; //valor de "meio" da entrada analogica
-  PID.SetMode(AUTOMATIC); //seta controlador pid como automático
+  SetOutputLimits(-50, 50) //muda valor da saídas
+  PID.SetMode(AUTOMATIC);  //seta controlador pid como automático
 }
 
 void loop() {
   bool arraylinha[4]; //armazena informações sobre a linha sendo true para branco e false para preto
-  int valorbase = 50; //nosso setpoint, mas em porcentagem
+  int SP_base = 50; //nosso setpoint, mas em porcentagem
   int in_percent; //guarda a porcentagem da entrada, calculo abaixo
   
   lerlinha(); //faz leitura da linha, podemos unir com a função comparaCor(), para ver se isso facilita o trabalho
@@ -88,22 +95,27 @@ void loop() {
   }else if(comparaCor(1) == "verde"){
     //virar para o lado do sensor 1
   }else{
-    arraylinha[0] = digitalRead(12);
-    arraylinha[1] = comparaCor(0) == "branco";
-    arraylinha[2] = comparaCor(1) == "branco";
-    arraylinha[3] = digitalRead(13);
+    arraylinha[0] = (digitalRead(12) >= BrancoIR) ? true : false;
+    arraylinha[1] = (comparaCor(0) == "branco") ? true : false;
+    arraylinha[2] = (comparaCor(1) == "branco") ? true: false;
+    arraylinha[3] = (digitalRead(13) >= BrancoIR) ? true : false;
     //verifica o valor armazenado de cada sensor e faz uma operação baseado na cor detectada, variando de 0% a 100%
     if(!arraylinha[0]){
-      in_percent = valorbase - 50;
+      in_percent = SP_base - 50;
     }else if(!arraylinha[1]){
-      in_percent = valorbase - 25;
+      in_percent = SP_base - 25;
     }else if(!arraylinha[2]){
-      in_percent = valorbase + 25;
+      in_percent = SP_base + 25;
     }else if(!arraylinha[3]){
-      in_percent = valorbase + 50;
+      in_percent = SP_base + 50;
     }
     in = map(in_percent, 0, 100, 0, 1023); //mapea do valor da porcentagem para um valor equivalente na escala aceita pela lib do pid
     PID.Compute(); //faz o pid, depois printa para nossos testes, falta ver a melhor de passar isso para os motores
+    digitalWrite(motorEsq1, vb + out);
+    digitalWrite(motorEsq2, 0);
+    digitalWrite(motorDir1, vb - out);
+    digitalWrite(motorDir2, 0);
+
     Serial.print("in: ");
     Serial.print(in);
     Serial.print(" out: ");
