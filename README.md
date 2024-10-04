@@ -1,5 +1,5 @@
 # roboifba
-Repositório pra guardar nossa fonte de 50 reais fácil
+Repositório pra guardar códigos do robô para o roboifba. descontinuado.
 
 #lista de bibliotecas:
 
